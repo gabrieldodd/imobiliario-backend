@@ -15,14 +15,25 @@ const app = express();
 connectDB();
 
 // Middleware
+// Configuração de CORS atualizada
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://imobiliario-frontend.vercel.app'],
+  origin: [
+    'http://localhost:3000',
+    'https://imobiliario-frontend.vercel.app',
+    'https://imobiliario-frontend-1ur996474-gabrieldodds-projects.vercel.app',
+    // Adicione qualquer outro domínio de front-end que você use
+  ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Middleware adicional para logs e parsing
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Middleware de pré-voo OPTIONS para todas as rotas
+app.options('*', cors());
 
 // Rotas
 app.use('/api/auth', authRoutes);
