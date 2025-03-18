@@ -34,6 +34,14 @@ const UserSchema = new mongoose.Schema({
     required: [true, 'Por favor, informe o nome da imobiliária'],
     trim: true,
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  active: {
+    type: Boolean,
+    default: true
+  },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {

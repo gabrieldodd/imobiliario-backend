@@ -12,6 +12,10 @@ const PropertySchema = new mongoose.Schema({
     required: [true, 'Por favor, informe um endereço'],
     trim: true,
   },
+  cep: {
+    type: String,
+    trim: true,
+  },
   type: {
     type: String,
     required: [true, 'Por favor, informe um tipo de imóvel'],

@@ -50,9 +50,12 @@ exports.getProperty = async (req, res, next) => {
 // @access    Private
 exports.createProperty = async (req, res, next) => {
   try {
-    // Adicionar usuário ao body
+    // Adicionar usuário e empresa ao body
     req.body.user = req.user.id;
     req.body.company = req.company;
+
+    // Log para debugar o CEP
+    console.log('CEP recebido na criação:', req.body.cep);
 
     const property = await Property.create(req.body);
 
@@ -61,6 +64,7 @@ exports.createProperty = async (req, res, next) => {
       data: property,
     });
   } catch (err) {
+    console.error('Erro ao criar imóvel:', err);
     next(err);
   }
 };
@@ -82,6 +86,9 @@ exports.updateProperty = async (req, res, next) => {
       });
     }
 
+    // Log para debugar o CEP
+    console.log('CEP recebido na atualização:', req.body.cep);
+
     property = await Property.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -92,6 +99,7 @@ exports.updateProperty = async (req, res, next) => {
       data: property,
     });
   } catch (err) {
+    console.error('Erro ao atualizar imóvel:', err);
     next(err);
   }
 };
