@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const PropertyType = require('../models/PropertyType');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // @desc      Registrar usuário
 // @route     POST /api/auth/register
@@ -103,7 +105,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Verificar se a senha corresponde
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       console.log('Senha incorreta para usuário:', email);
@@ -422,8 +424,12 @@ exports.toggleUserStatus = async (req, res, next) => {
 
 // Função auxiliar para gerar token e enviar resposta
 const sendTokenResponse = (user, statusCode, res) => {
-  // Criar token
-  const token = user.getSignedJwtToken();
+  // Criar token JWT
+  const token = jwt.sign(
+    { id: user._id, role: user.role, company: user.company },
+    process.env.JWT_SECRET || 'mysecretkey',
+    { expiresIn: process.env.JWT_EXPIRE || '30d' }
+  );
 
   const options = {
     expires: new Date(
