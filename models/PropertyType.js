@@ -5,7 +5,7 @@ const PropertyTypeSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Por favor, informe um nome para o tipo de imóvel'],
     trim: true,
-    unique: true,
+    // Removemos qualquer constraint unique para evitar problemas
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -19,7 +19,11 @@ const PropertyTypeSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-  },
+  }
 });
+
+// Índice composto para garantir que nome+empresa sejam únicos juntos
+// Este índice é mais flexível que a opção unique no schema
+PropertyTypeSchema.index({ name: 1, company: 1 }, { unique: true });
 
 module.exports = mongoose.model('PropertyType', PropertyTypeSchema);
