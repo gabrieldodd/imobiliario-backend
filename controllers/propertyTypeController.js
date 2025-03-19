@@ -15,6 +15,7 @@ exports.getPropertyTypes = async (req, res, next) => {
       data: propertyTypes,
     });
   } catch (err) {
+    console.error('Erro ao buscar tipos de imóveis:', err);
     next(err);
   }
 };
@@ -41,6 +42,7 @@ exports.getPropertyType = async (req, res, next) => {
       data: propertyType,
     });
   } catch (err) {
+    console.error('Erro ao buscar tipo de imóvel:', err);
     next(err);
   }
 };
@@ -50,13 +52,26 @@ exports.getPropertyType = async (req, res, next) => {
 // @access    Private
 exports.createPropertyType = async (req, res, next) => {
   try {
-    // Adicionar usuário ao body
+    console.log('Dados recebidos para criar tipo de imóvel:', req.body);
+
+    // Validar se o nome foi enviado
+    if (!req.body.name || typeof req.body.name !== 'string' || req.body.name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Por favor, informe um nome válido para o tipo de imóvel',
+      });
+    }
+
+    // Adicionar usuário e empresa ao body
     req.body.user = req.user.id;
     req.body.company = req.company;
 
+    // Normalizar o nome (remover espaços extras)
+    req.body.name = req.body.name.trim();
+
     // Verificar se já existe um tipo com esse nome
     const existing = await PropertyType.findOne({
-      name: req.body.name,
+      name: { $regex: new RegExp(`^${req.body.name}$`, 'i') }, // Case insensitive
       company: req.company
     });
 
@@ -67,13 +82,16 @@ exports.createPropertyType = async (req, res, next) => {
       });
     }
 
+    console.log('Criando tipo de imóvel:', req.body);
     const propertyType = await PropertyType.create(req.body);
+    console.log('Tipo de imóvel criado:', propertyType);
 
     res.status(201).json({
       success: true,
       data: propertyType,
     });
   } catch (err) {
+    console.error('Erro ao criar tipo de imóvel:', err);
     next(err);
   }
 };
@@ -83,6 +101,8 @@ exports.createPropertyType = async (req, res, next) => {
 // @access    Private
 exports.updatePropertyType = async (req, res, next) => {
   try {
+    console.log('Dados recebidos para atualizar tipo de imóvel:', req.params.id, req.body);
+
     let propertyType = await PropertyType.findOne({
       _id: req.params.id,
       company: req.company
@@ -95,10 +115,21 @@ exports.updatePropertyType = async (req, res, next) => {
       });
     }
 
+    // Validar se o nome foi enviado
+    if (!req.body.name || typeof req.body.name !== 'string' || req.body.name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Por favor, informe um nome válido para o tipo de imóvel',
+      });
+    }
+
+    // Normalizar o nome (remover espaços extras)
+    req.body.name = req.body.name.trim();
+
     // Verificar se já existe outro tipo com o novo nome
     if (req.body.name && req.body.name !== propertyType.name) {
       const existing = await PropertyType.findOne({
-        name: req.body.name,
+        name: { $regex: new RegExp(`^${req.body.name}$`, 'i') }, // Case insensitive
         company: req.company,
         _id: { $ne: req.params.id }
       });
@@ -114,7 +145,9 @@ exports.updatePropertyType = async (req, res, next) => {
     // Guardar o nome antigo para atualizar os imóveis
     const oldName = propertyType.name;
 
-    propertyType = await PropertyType.findByIdAndUpdate(req.params.id, req.body, {
+    propertyType = await PropertyType.findByIdAndUpdate(req.params.id, {
+      name: req.body.name
+    }, {
       new: true,
       runValidators: true,
     });
@@ -132,6 +165,7 @@ exports.updatePropertyType = async (req, res, next) => {
       data: propertyType,
     });
   } catch (err) {
+    console.error('Erro ao atualizar tipo de imóvel:', err);
     next(err);
   }
 };
@@ -166,13 +200,14 @@ exports.deletePropertyType = async (req, res, next) => {
       });
     }
 
-    await propertyType.remove();
+    await propertyType.deleteOne();
 
     res.status(200).json({
       success: true,
       data: {},
     });
   } catch (err) {
+    console.error('Erro ao excluir tipo de imóvel:', err);
     next(err);
   }
 };
