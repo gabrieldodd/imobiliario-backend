@@ -80,31 +80,34 @@ exports.createPropertyType = async (req, res) => {
       });
     }
 
-    // Verificar se já existe um tipo com esse nome na mesma empresa
-    const normalizedName = req.body.name.trim().toLowerCase();
+    // Normalizar nome para comparações
+    const normalizedName = req.body.name.trim();
+    
+    // CORREÇÃO: Verificar se já existe um tipo com esse nome APENAS NA MESMA EMPRESA
+    // Busca case-insensitive para evitar duplicações como "Casa" e "casa"
     const existing = await PropertyType.findOne({
       name: new RegExp(`^${normalizedName}$`, 'i'),
-      company: req.company
+      company: req.company // Isso filtra pela empresa do usuário atual
     });
 
     if (existing) {
-      console.log('Tipo de imóvel já existe:', normalizedName);
+      console.log('Tipo de imóvel já existe na empresa:', normalizedName);
       return res.status(400).json({
         success: false,
-        error: 'Tipo de imóvel com esse nome já existe'
+        error: 'Tipo de imóvel com esse nome já existe na sua empresa'
       });
     }
 
     // Preparar dados para criação
     const typeData = {
-      name: req.body.name.trim(),
+      name: normalizedName,
       user: req.user.id,
       company: req.company
     };
     
     console.log('Criando tipo de imóvel com dados:', typeData);
     
-    // Criar o tipo de imóvel de modo mais robusto
+    // Criar o tipo de imóvel
     const propertyType = new PropertyType(typeData);
     const savedType = await propertyType.save();
     
@@ -117,11 +120,12 @@ exports.createPropertyType = async (req, res) => {
   } catch (err) {
     console.error('Erro detalhado ao criar tipo de imóvel:', err);
     
-    // Tratamento de erro para violação de índice único
-    if (err.code === 11000) {
+    // Tratar erros
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
       return res.status(400).json({
         success: false,
-        error: 'Tipo de imóvel com esse nome já existe'
+        error: messages.join(', ')
       });
     }
     
@@ -152,7 +156,10 @@ exports.updatePropertyType = async (req, res) => {
       });
     }
 
-    // Buscar o tipo para verificar se existe
+    // Normalizar nome
+    const normalizedName = req.body.name.trim();
+    
+    // Buscar o tipo para verificar se existe e pertence à empresa do usuário
     let propertyType = await PropertyType.findOne({
       _id: req.params.id,
       company: req.company
@@ -166,43 +173,41 @@ exports.updatePropertyType = async (req, res) => {
       });
     }
 
-    // Verificar se o novo nome já existe para outro tipo na mesma empresa
-    const normalizedName = req.body.name.trim().toLowerCase();
-    if (normalizedName !== propertyType.name.toLowerCase()) {
+    // CORREÇÃO: Verificar se o novo nome já existe APENAS NA MESMA EMPRESA
+    if (normalizedName.toLowerCase() !== propertyType.name.toLowerCase()) {
       const existing = await PropertyType.findOne({
         name: new RegExp(`^${normalizedName}$`, 'i'),
         company: req.company,
-        _id: { $ne: req.params.id }
+        _id: { $ne: req.params.id } // Excluir o próprio documento da verificação
       });
 
       if (existing) {
-        console.log('Nome já existe para outro tipo:', normalizedName);
+        console.log('Nome já existe para outro tipo na mesma empresa:', normalizedName);
         return res.status(400).json({
           success: false,
-          error: 'Tipo de imóvel com esse nome já existe'
+          error: 'Tipo de imóvel com esse nome já existe na sua empresa'
         });
       }
     }
 
     // Guardar o nome antigo para atualizar imóveis
     const oldName = propertyType.name;
-    const newName = req.body.name.trim();
-
+    
     // Atualizar o tipo
     propertyType = await PropertyType.findByIdAndUpdate(
       req.params.id,
-      { name: newName },
+      { name: normalizedName },
       { new: true, runValidators: true }
     );
 
     console.log('Tipo de imóvel atualizado:', propertyType);
 
     // Atualizar imóveis que usam este tipo
-    if (oldName !== newName) {
-      console.log(`Atualizando imóveis do tipo "${oldName}" para "${newName}"`);
+    if (oldName !== normalizedName) {
+      console.log(`Atualizando imóveis do tipo "${oldName}" para "${normalizedName}"`);
       await Property.updateMany(
         { type: oldName, company: req.company },
-        { type: newName }
+        { type: normalizedName }
       );
     }
 
@@ -213,11 +218,11 @@ exports.updatePropertyType = async (req, res) => {
   } catch (err) {
     console.error('Erro ao atualizar tipo de imóvel:', err);
     
-    // Tratamento de erro para violação de índice único
-    if (err.code === 11000) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
       return res.status(400).json({
         success: false,
-        error: 'Tipo de imóvel com esse nome já existe'
+        error: messages.join(', ')
       });
     }
     
@@ -235,7 +240,7 @@ exports.deletePropertyType = async (req, res) => {
   try {
     console.log('Tentativa de excluir tipo de imóvel:', req.params.id);
 
-    // Buscar o tipo para verificar se existe
+    // Buscar o tipo para verificar se existe e pertence à empresa do usuário
     const propertyType = await PropertyType.findOne({
       _id: req.params.id,
       company: req.company

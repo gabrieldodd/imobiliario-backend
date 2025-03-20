@@ -5,7 +5,7 @@ const PropertyTypeSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Por favor, informe um nome para o tipo de imóvel'],
     trim: true,
-    // Removemos qualquer constraint unique para evitar problemas
+    // Removida restrição unique global
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -22,8 +22,11 @@ const PropertyTypeSchema = new mongoose.Schema({
   }
 });
 
-// Índice composto para garantir que nome+empresa sejam únicos juntos
-// Este índice é mais flexível que a opção unique no schema
-PropertyTypeSchema.index({ name: 1, company: 1 }, { unique: true });
+// CORREÇÃO: Índice composto para garantir que nome+empresa sejam únicos juntos
+// Isso cria unicidade apenas dentro da mesma empresa
+PropertyTypeSchema.index({ name: 1, company: 1 }, { 
+  unique: true,
+  collation: { locale: 'pt', strength: 2 } // Tornar case-insensitive em português
+});
 
 module.exports = mongoose.model('PropertyType', PropertyTypeSchema);
